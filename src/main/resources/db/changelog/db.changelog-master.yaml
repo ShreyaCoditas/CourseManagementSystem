@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-tables
+      author: Shreya
+      changes:
+        - sqlFile:
+            path: sql/001-create-tables.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true
+
+  - changeSet:
+      id: 002-insert-initial-data
+      author: Shreya
+      changes:
+        - sqlFile:
+            path: sql/002-insert-initial-data.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true
