@@ -11,8 +11,8 @@ import java.util.List;
 
 public class UserPrincipal implements UserDetails {
 
-    @Autowired
-    private User user;
+
+    private final User user;
 
     public UserPrincipal(User user) {
         this.user = user;

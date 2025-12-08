@@ -29,8 +29,8 @@ public class AdminController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<ApiResponseDto<List<AdminDashboardDto>>> adminDashboard(){
-        ApiResponseDto<List<AdminDashboardDto>> response=adminService.adminDashboard();
+    public ResponseEntity<ApiResponseDto<AdminDashboardDto>> adminDashboard(){
+        ApiResponseDto<AdminDashboardDto> response=adminService.adminDashboard();
         return ResponseEntity.ok(response);
     }
 }

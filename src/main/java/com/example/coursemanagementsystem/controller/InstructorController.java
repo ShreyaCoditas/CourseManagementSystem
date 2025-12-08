@@ -1,14 +1,12 @@
 package com.example.coursemanagementsystem.controller;
 
-import com.example.coursemanagementsystem.dto.AddCourseDto;
-import com.example.coursemanagementsystem.dto.ApiResponseDto;
-import com.example.coursemanagementsystem.dto.CourseDto;
-import com.example.coursemanagementsystem.dto.UpdateCourseDto;
+import com.example.coursemanagementsystem.dto.*;
 import com.example.coursemanagementsystem.entity.User;
 import com.example.coursemanagementsystem.security.UserPrincipal;
 import com.example.coursemanagementsystem.service.InstructorService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +29,8 @@ public class InstructorController {
         return ResponseEntity.ok(response);
     }
 
+
+
     @PutMapping("/update/course/{courseId}")
     public ResponseEntity<ApiResponseDto<CourseDto>> updateCourse(
            @Valid @RequestBody UpdateCourseDto updateCourseDto,
@@ -50,12 +50,28 @@ public class InstructorController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/all/courses")
-    public ResponseEntity<ApiResponseDto<List<CourseDto>>>getAllCourses(
-            @AuthenticationPrincipal UserPrincipal userPrincipal){
-        User instructor=userPrincipal.getUser();
-        ApiResponseDto<List<CourseDto>> response=instructorService.getAllCourses(instructor);
+    @GetMapping("/enrolled/students")
+//    public ResponseEntity<ApiResponseDto<List<StudentInfoDto>>> getEnrolledStudents(
+//            @AuthenticationPrincipal UserPrincipal principal
+//    ) {
+//        User instructor = principal.getUser();
+//        ApiResponseDto<List<StudentInfoDto>> response = instructorService.getEnrolledStudents(instructor);
+//        return ResponseEntity.ok(response);
+//    }
+
+    public ResponseEntity<ApiResponseDto<Page<StudentInfoDto>>> getEnrolledStudents(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "pageSize",defaultValue = "10") int pageSize,
+            @RequestParam(value = "pageNumber",defaultValue = "0") int pageNumber
+    ){
+        User instructor=principal.getUser();
+        ApiResponseDto<Page<StudentInfoDto>> response=instructorService.getEnrolledStudents(instructor,pageSize,pageNumber);
         return ResponseEntity.ok(response);
     }
+
+
+
+
+
 
 }

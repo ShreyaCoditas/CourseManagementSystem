@@ -8,6 +8,7 @@ import com.example.coursemanagementsystem.service.StudentService;
 import jakarta.validation.Valid;
 import org.apache.catalina.connector.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -40,15 +41,43 @@ public class StudentController {
   }
 
   @GetMapping("/view/courses")
-    public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getAllCourses(){
-      ApiResponseDto<List<CourseResponseDto>> response=studentService.getAllCourses();
-      return ResponseEntity.ok(response);
+//    public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getAllCourses(){
+//      ApiResponseDto<List<CourseResponseDto>> response=studentService.getAllCourses();
+//      return ResponseEntity.ok(response);
+//  }
+
+
+
+  public ResponseEntity<ApiResponseDto<Page<CourseResponseDto>>> getAllCourses(
+          @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+          @RequestParam(value = "pageNumber", defaultValue = "0") int pageNumber
+  ) {
+
+    ApiResponseDto<Page<CourseResponseDto>> response =
+            studentService.getAllCourses(pageNumber, pageSize); // FIXED ORDER
+
+    return ResponseEntity.ok(response);   // FIXED RETURN TYPE
   }
+
+
 
   //To view the courses in which they are enrolled
   @GetMapping("/view/enrolled/courses")
-  public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getAllEnrolledCourses(){
-    ApiResponseDto<List<CourseResponseDto>> response=studentService.getAllEnrolledCourses();
+//  public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getEnrolledCourses(
+//          @AuthenticationPrincipal UserPrincipal principal) {
+//    Long studentId = principal.getUser().getId();
+//    ApiResponseDto<List<CourseResponseDto>> response = studentService.getEnrolledCourses(studentId);
+//    return ResponseEntity.ok(response);
+//  }
+
+  public ResponseEntity<ApiResponseDto<Page<CourseResponseDto>>> getEnrolledCourses(
+          @AuthenticationPrincipal UserPrincipal principal,
+          @RequestParam(value="pageSize",defaultValue ="10")int pageSize,
+          @RequestParam(value="pageNumber",defaultValue = "0")int pageNumber){
+    Long studentId=principal.getUser().getId();
+    ApiResponseDto<Page<CourseResponseDto>> response=studentService.getEnrolledCourses(studentId,pageSize,pageNumber);
     return ResponseEntity.ok(response);
   }
+
+
 }

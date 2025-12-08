@@ -6,6 +6,8 @@ import com.example.coursemanagementsystem.dto.CreateLoginDto;
 import com.example.coursemanagementsystem.dto.CreateRegisterDto;
 import com.example.coursemanagementsystem.dto.LoginResponseDto;
 import com.example.coursemanagementsystem.entity.User;
+import com.example.coursemanagementsystem.exception.ResourceAlreadyExistsException;
+import com.example.coursemanagementsystem.exception.ResourceNotFoundException;
 import com.example.coursemanagementsystem.repository.UserRepository;
 import com.example.coursemanagementsystem.security.JwtUtil;
 import jakarta.validation.Valid;
@@ -36,9 +38,9 @@ public class AuthService {
         String email = createRegisterDto.getEmail();
         String name = createRegisterDto.getName();
         if (userRepository.findByEmailIgnoreCase(email).isPresent())
-            throw new RuntimeException("Email Already exists");
+            throw new ResourceAlreadyExistsException("Email Already exists");
         if (userRepository.findByNameIgnoreCase(name).isPresent())
-            throw new RuntimeException("Username already exists");
+            throw new ResourceAlreadyExistsException("Username already exists");
         User user = new User();
         user.setName(createRegisterDto.getName());
         user.setEmail(createRegisterDto.getEmail());
@@ -52,7 +54,7 @@ public class AuthService {
     //login
     public ApiResponseDto<LoginResponseDto> login(@Valid CreateLoginDto createLoginDto) {
         User user = userRepository.findByEmailIgnoreCase(createLoginDto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Email Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email Not Found"));
 
         try {
             Authentication authentication = authManager.authenticate(

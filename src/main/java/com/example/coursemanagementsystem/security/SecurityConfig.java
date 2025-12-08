@@ -33,20 +33,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(request -> {
-                    var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                    corsConfig.setAllowedOrigins(List.of(
-                            "http://localhost:3000",
-                            "https://intelligible-unextreme-rose.ngrok-free.dev"
-                    ));
-                    corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    corsConfig.setAllowedHeaders(List.of("*"));
-                    corsConfig.setAllowCredentials(true);
-                    return corsConfig;
-                }))
                 .authorizeHttpRequests(request -> request
-
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
@@ -57,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/instructor/add/course").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/instructor/update/course/{courseId}").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/instructor/delete/course/{courseId}").hasRole("INSTRUCTOR")
+                        .requestMatchers("/api/instructor/enrolled/students").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/instructor/all/courses").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/student/enroll/course/{courseId}").hasRole("STUDENT")
                         .requestMatchers("/api/student/cancel/enrollment/course/{courseId}").hasRole("STUDENT")
@@ -64,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/view/enrolled/courses").hasRole("STUDENT")
                         .requestMatchers("/api/admin/delete/users/{userId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/delete/courses/{courseId}").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/dashboard").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

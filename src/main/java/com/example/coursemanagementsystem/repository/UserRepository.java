@@ -1,5 +1,6 @@
 package com.example.coursemanagementsystem.repository;
 
+import com.example.coursemanagementsystem.constants.Roles;
 import com.example.coursemanagementsystem.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,5 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     Optional<User> findByNameIgnoreCase(String name);
 
+    long countByRole(Roles roles);
 }
