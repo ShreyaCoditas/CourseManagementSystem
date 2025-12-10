@@ -51,27 +51,13 @@ public class InstructorController {
     }
 
     @GetMapping("/enrolled/students")
-//    public ResponseEntity<ApiResponseDto<List<StudentInfoDto>>> getEnrolledStudents(
-//            @AuthenticationPrincipal UserPrincipal principal
-//    ) {
-//        User instructor = principal.getUser();
-//        ApiResponseDto<List<StudentInfoDto>> response = instructorService.getEnrolledStudents(instructor);
-//        return ResponseEntity.ok(response);
-//    }
-
-    public ResponseEntity<ApiResponseDto<Page<StudentInfoDto>>> getEnrolledStudents(
+    public ResponseEntity<ApiResponseDto<PaginatedResponse<StudentInfoDto>>> getEnrolledStudents(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestParam(value = "pageSize",defaultValue = "10") int pageSize,
-            @RequestParam(value = "pageNumber",defaultValue = "0") int pageNumber
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "0") int pageNumber
     ){
         User instructor=principal.getUser();
-        ApiResponseDto<Page<StudentInfoDto>> response=instructorService.getEnrolledStudents(instructor,pageSize,pageNumber);
+        ApiResponseDto<PaginatedResponse<StudentInfoDto>> response=instructorService.getEnrolledStudents(instructor,pageSize,pageNumber);
         return ResponseEntity.ok(response);
     }
-
-
-
-
-
-
 }

@@ -19,4 +19,6 @@ public class CourseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private User instructorName;
+    private Double price;
+    private String courseType; //free or paid
 }

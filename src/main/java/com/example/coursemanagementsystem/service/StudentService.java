@@ -1,13 +1,10 @@
 package com.example.coursemanagementsystem.service;
+import com.example.coursemanagementsystem.constants.PaymentStatus;
+import com.example.coursemanagementsystem.dto.*;
 import com.example.coursemanagementsystem.security.UserPrincipal;
-
 import com.example.coursemanagementsystem.constants.EnrollmentStatus;
 import com.example.coursemanagementsystem.constants.Roles;
 import com.example.coursemanagementsystem.constants.Status;
-import com.example.coursemanagementsystem.dto.ApiResponseDto;
-import com.example.coursemanagementsystem.dto.CancelEnrollmentResponseDTO;
-import com.example.coursemanagementsystem.dto.CourseResponseDto;
-import com.example.coursemanagementsystem.dto.EnrollmentDTO;
 import com.example.coursemanagementsystem.entity.Course;
 import com.example.coursemanagementsystem.entity.Enrollment;
 import com.example.coursemanagementsystem.entity.User;
@@ -16,10 +13,14 @@ import com.example.coursemanagementsystem.exception.InactiveCourseException;
 import com.example.coursemanagementsystem.exception.ResourceNotFoundException;
 import com.example.coursemanagementsystem.repository.CourseRepository;
 import com.example.coursemanagementsystem.repository.EnrollmentRepository;
+import com.example.coursemanagementsystem.specifications.CourseSpecifications;
+import com.example.coursemanagementsystem.util.EmailUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,34 +40,46 @@ public class StudentService {
     @Autowired
     private CourseRepository courseRepository;
 
-//    public ApiResponseDto<List<CourseResponseDto>> getAllCourses() {
-//        List<Course> courses=courseRepository.findByStatus(Status.ACTIVE);
-//        List<CourseResponseDto> courseResponseDtos=courses.stream()
-//                .map(this::mapToCourseDto)
-//                .collect(Collectors.toList());
-//        return new ApiResponseDto<>(true,"Fetched All Courses successfully",courseResponseDtos);
-//    }
+    @Autowired
+    private EmailUtil emailUtil;
 
-    public ApiResponseDto<Page<CourseResponseDto>> getAllCourses(int pageNumber, int pageSize) {
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Course> coursePage = courseRepository.findByStatus(Status.ACTIVE, pageable);
+
+
+    public ApiResponseDto<PaginatedResponse<CourseResponseDto>> getAllCourses(
+            int pageNumber, int pageSize,
+            String sortBy,String direction,
+            String title,String instructorName,Status status,
+            LocalDateTime fromDate,LocalDateTime toDate,
+            String searchKeyword,
+            Integer minStudents,Integer maxStudents) {
+
+        Sort sort=direction.equalsIgnoreCase("desc")
+                ?Sort.by(sortBy).descending()
+                :Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(pageNumber, pageSize,sort);
+        Status finalStatus = (status == null ? Status.ACTIVE : status);
+
+        Specification<Course> spec=Specification.allOf(
+                CourseSpecifications.hasTitle(title),
+                CourseSpecifications.hasInstructorName(instructorName),
+                CourseSpecifications.hasStatus(finalStatus),
+                CourseSpecifications.createdBetween(fromDate,toDate),
+                CourseSpecifications.globalSearch(searchKeyword)
+        );
+
+        Page<Course> coursePage = courseRepository.findAll(spec, pageable);
         Page<CourseResponseDto> dtoPage = coursePage.map(this::mapToCourseDto);
-        return new ApiResponseDto<>(true, "Fetched All Courses successfully", dtoPage);
+        PaginatedResponse response=new PaginatedResponse(dtoPage.getContent(),dtoPage.getNumber(), dtoPage.getSize(), dtoPage.getTotalElements(), dtoPage.getTotalPages());
+        return new ApiResponseDto<>(true, "Fetched All Courses successfully", response);
     }
 
-//    public ApiResponseDto<List<CourseResponseDto>> getEnrolledCourses(Long studentId) {
-//        List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndEnrollmentStatus(studentId, EnrollmentStatus.ENROLLED);
-//        List<CourseResponseDto> courseResponseDtos = enrollments.stream()
-//                .map(e -> mapToCourseDto(e.getCourse()))
-//                .toList();
-//        return new ApiResponseDto<>(true, "Fetched enrolled courses successfully", courseResponseDtos);
-//    }
-
-    public ApiResponseDto<Page<CourseResponseDto>> getEnrolledCourses(Long studentId,int pageSize,int pageNumber){
+    
+    public ApiResponseDto<PaginatedResponse<CourseResponseDto>> getEnrolledCourses(Long studentId,int pageSize,int pageNumber){
         Pageable pageable=PageRequest.of(pageNumber,pageSize);
         Page<Enrollment> enrollments=enrollmentRepository.findByStudentIdAndEnrollmentStatus(studentId,EnrollmentStatus.ENROLLED,pageable);
         Page<CourseResponseDto> courseResponseDtos=enrollments.map(e->mapToCourseDto(e.getCourse()));
-        return new ApiResponseDto<>(true,"Fetched enrolled courses successfully",courseResponseDtos);
+        PaginatedResponse response=new PaginatedResponse(courseResponseDtos.getContent(),courseResponseDtos.getSize(),courseResponseDtos.getNumber(),courseResponseDtos.getTotalElements(),courseResponseDtos.getTotalPages());
+        return new ApiResponseDto<>(true,"Fetched enrolled courses successfully",response);
     }
 
     public ApiResponseDto<EnrollmentDTO> enrollIntoCourse(Long courseId, User student) {
@@ -85,7 +98,24 @@ public class StudentService {
         enrollment.setCourse(course);
         enrollment.setEnrolledAt(LocalDateTime.now());
         enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
+        if (course.getPrice() != null && course.getPrice() > 0) {
+            enrollment.setPaymentStatus(PaymentStatus.PENDING); // paid course → pending payment
+        } else {
+            enrollment.setPaymentStatus(PaymentStatus.PAID); // free course
+        }
         Enrollment saved=enrollmentRepository.save(enrollment);
+
+        emailUtil.sendEmail(
+                student.getEmail(),
+                "Enrollment Successful: " + course.getTitle(),
+                "Hi " + student.getName() + ",\n\n" +
+                        "You have successfully enrolled in the course \"" + course.getTitle() + "\".\n" +
+                        "Course Status: " + enrollment.getEnrollmentStatus() + "\n" +
+                        "Payment Status: " + enrollment.getPaymentStatus() + "\n\n" +
+                        "Thank you for using our platform!\n" +
+                        "Course Management Team"
+        );
+
         return new ApiResponseDto<>(true,"Student enrolled into course successfully",mapToEnrollmentDTO(saved));
 
     }
@@ -101,8 +131,7 @@ public class StudentService {
         if(!student.getRole().equals(Roles.STUDENT))
             throw new AccessDeniedException("Only Student can cancel the enrollment");
 
-        Enrollment enrollment=enrollmentRepository.
-                findByCourseIdAndStudentId(courseId,student.getId())
+        Enrollment enrollment=enrollmentRepository.findByCourseIdAndStudentId(courseId,student.getId())
                         .orElseThrow(()->new ResourceNotFoundException("Enrollment Not found"));
 
         enrollment.setCourse(course);
@@ -112,6 +141,30 @@ public class StudentService {
         Enrollment saved=enrollmentRepository.save(enrollment);
         return new ApiResponseDto<>(true,"cancelled enrollment successfully",mapToDto(saved));
     }
+
+
+    public ApiResponseDto<String> purchaseCourse(Long courseId, User student) {
+        Course course=courseRepository.findById(courseId)
+                .orElseThrow(()->new ResourceNotFoundException("Course Not Found"));
+
+        if(course.getStatus()==Status.INACTIVE)
+            throw new InactiveCourseException("Cannot cancel inactive status");
+
+        if(!Roles.STUDENT.equals(student.getRole()))
+            throw new AccessDeniedException("Only students are allowed to purchase the Courses");
+
+        Enrollment enrollment = enrollmentRepository
+                .findByCourseIdAndStudentIdAndEnrollmentStatus(courseId, student.getId(),EnrollmentStatus.ENROLLED)
+                .orElseThrow(() -> new ResourceNotFoundException("Enroll before purchasing"));
+
+        if (enrollment.getPaymentStatus() == PaymentStatus.PAID)
+            return new ApiResponseDto<>(true, "Course already purchased", "PAID");
+
+        enrollment.setPaymentStatus(PaymentStatus.PAID);
+        enrollmentRepository.save(enrollment);
+        return new ApiResponseDto<>(true, "Payment successful. Course unlocked!", "PAID");
+    }
+
 
     private EnrollmentDTO mapToEnrollmentDTO(Enrollment enrollment){
         Course course= enrollment.getCourse();
@@ -147,6 +200,8 @@ public class StudentService {
                 .description(course.getDescription())
                 .status(course.getStatus())
                 .instructorName(course.getInstructor().getName())
+                .courseType(course.getPrice() != null && course.getPrice() > 0 ? "PAID" : "FREE")
+                .price(course.getPrice())
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
                 .build();

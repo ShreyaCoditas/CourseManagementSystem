@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/cancel/enrollment/course/{courseId}").hasRole("STUDENT")
                         .requestMatchers("/api/student/view/courses").hasRole("STUDENT")
                         .requestMatchers("/api/student/view/enrolled/courses").hasRole("STUDENT")
+                        .requestMatchers("/api/student/purchase/course/{courseId}").hasRole("STUDENT")
                         .requestMatchers("/api/admin/delete/users/{userId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/delete/courses/{courseId}").hasRole("ADMIN")
                         .requestMatchers("/api/admin/dashboard").hasRole("ADMIN")

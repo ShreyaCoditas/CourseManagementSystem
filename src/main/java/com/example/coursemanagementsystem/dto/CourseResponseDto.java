@@ -18,6 +18,8 @@ public class CourseResponseDto {
     private String description;
     private Status status;
     private String instructorName;
+    private Double price;
+    private String courseType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

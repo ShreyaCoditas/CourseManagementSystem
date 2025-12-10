@@ -2,6 +2,7 @@ package com.example.coursemanagementsystem.controller;
 
 import com.example.coursemanagementsystem.dto.*;
 import com.example.coursemanagementsystem.entity.User;
+import com.example.coursemanagementsystem.constants.Status;
 import com.example.coursemanagementsystem.repository.UserRepository;
 import com.example.coursemanagementsystem.security.UserPrincipal;
 import com.example.coursemanagementsystem.service.StudentService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -41,43 +43,55 @@ public class StudentController {
   }
 
   @GetMapping("/view/courses")
-//    public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getAllCourses(){
-//      ApiResponseDto<List<CourseResponseDto>> response=studentService.getAllCourses();
-//      return ResponseEntity.ok(response);
-//  }
+  public ResponseEntity<ApiResponseDto<PaginatedResponse<CourseResponseDto>>> getAllCourses(
+          @RequestParam(defaultValue = "10") int pageSize,
+          @RequestParam(defaultValue = "0") int pageNumber,
+          @RequestParam(defaultValue = "id") String sortBy,
+          @RequestParam(defaultValue = "asc") String direction,
 
+          //Filters
+          @RequestParam(required = false)String title,
+          @RequestParam(required = false) String instructorName,
+          @RequestParam(required = false) Status status,
 
+          //Data Range
+          @RequestParam(required = false)LocalDateTime fromDate,
+          @RequestParam(required = false)LocalDateTime toDate,
 
-  public ResponseEntity<ApiResponseDto<Page<CourseResponseDto>>> getAllCourses(
-          @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
-          @RequestParam(value = "pageNumber", defaultValue = "0") int pageNumber
-  ) {
+          //Global Search
+          @RequestParam(required = false) String search,
 
-    ApiResponseDto<Page<CourseResponseDto>> response =
-            studentService.getAllCourses(pageNumber, pageSize); // FIXED ORDER
-
-    return ResponseEntity.ok(response);   // FIXED RETURN TYPE
+          //student count range
+          @RequestParam(required = false) Integer minStudents,
+          @RequestParam(required = false) Integer maxStudents
+          ) {
+    ApiResponseDto<PaginatedResponse<CourseResponseDto>> response = studentService.getAllCourses(pageNumber,pageSize,sortBy,direction,title,instructorName,status,fromDate,toDate,search,minStudents,maxStudents);
+    return ResponseEntity.ok(response);
   }
 
 
 
   //To view the courses in which they are enrolled
   @GetMapping("/view/enrolled/courses")
-//  public ResponseEntity<ApiResponseDto<List<CourseResponseDto>>> getEnrolledCourses(
-//          @AuthenticationPrincipal UserPrincipal principal) {
-//    Long studentId = principal.getUser().getId();
-//    ApiResponseDto<List<CourseResponseDto>> response = studentService.getEnrolledCourses(studentId);
-//    return ResponseEntity.ok(response);
-//  }
-
-  public ResponseEntity<ApiResponseDto<Page<CourseResponseDto>>> getEnrolledCourses(
+  public ResponseEntity<ApiResponseDto<PaginatedResponse<CourseResponseDto>>> getEnrolledCourses(
           @AuthenticationPrincipal UserPrincipal principal,
           @RequestParam(value="pageSize",defaultValue ="10")int pageSize,
           @RequestParam(value="pageNumber",defaultValue = "0")int pageNumber){
     Long studentId=principal.getUser().getId();
-    ApiResponseDto<Page<CourseResponseDto>> response=studentService.getEnrolledCourses(studentId,pageSize,pageNumber);
+    ApiResponseDto<PaginatedResponse<CourseResponseDto>> response=studentService.getEnrolledCourses(studentId,pageSize,pageNumber);
     return ResponseEntity.ok(response);
   }
+
+  @PostMapping("/purchase/course/{courseId}")
+  public ResponseEntity<ApiResponseDto<String>> purchaseCourse(
+          @PathVariable Long courseId,
+          @AuthenticationPrincipal UserPrincipal principal
+  ) {
+    User student = principal.getUser();
+    ApiResponseDto<String> response = studentService.purchaseCourse(courseId, student);
+    return ResponseEntity.ok(response);
+  }
+
 
 
 }

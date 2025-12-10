@@ -48,6 +48,7 @@ public class InstructorService {
         course.setDescription(addCourseDto.getDescription());
         course.setInstructor(instructor);
         course.setStatus(Status.ACTIVE);
+        course.setPrice(addCourseDto.getPrice());
         courseRepository.save(course);
         return new ApiResponseDto<>(true,"Course added successfully",null);
 
@@ -71,14 +72,12 @@ public class InstructorService {
 
         course.setTitle(updateCourseDto.getTitle());
         course.setDescription(updateCourseDto.getDescription());
+        if (updateCourseDto.getPrice() != null) {
+            course.setPrice(updateCourseDto.getPrice());
+        }
+
         courseRepository.save(course);
-        CourseDto courseDto=new CourseDto();
-        courseDto.setId(course.getId());
-        courseDto.setTitle(course.getTitle());
-        courseDto.setDescription(course.getDescription());
-        courseDto.setCreatedAt(course.getCreatedAt());
-        courseDto.setUpdatedAt(course.getUpdatedAt());
-        return new ApiResponseDto<>(true,"Updated course successfully",courseDto);
+        return new ApiResponseDto<>(true,"Updated course successfully",convertToDto(course));
     }
 
     public ApiResponseDto<Void> deleteCourse(Long courseId,User instructor) {
@@ -93,27 +92,15 @@ public class InstructorService {
         return new ApiResponseDto<>(true,"Course deleted successfully",null);
     }
 
-//    public ApiResponseDto<List<StudentInfoDto>> getEnrolledStudents(User instructor) {
-//
-//        if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
-//            throw new AccessDeniedException("Only instructors can view enrolled students");
-//        }
-//        List<Enrollment> enrollments = enrollmentRepository.findByCourseInstructorAndEnrollmentStatus(instructor, EnrollmentStatus.ENROLLED);
-//        List<StudentInfoDto> dtoList = enrollments.stream()
-//                .map(this::mapToStudentInfoDto)
-//                .toList();
-//        return new ApiResponseDto<>(true, "Fetched enrolled students successfully", dtoList);
-//    }
-
-    public ApiResponseDto<Page<StudentInfoDto>> getEnrolledStudents(User instructor,int pageNumber,int pageSize){
-        if(Roles.INSTRUCTOR.equals(instructor.getRole())){
+    public ApiResponseDto<PaginatedResponse<StudentInfoDto>> getEnrolledStudents(User instructor,int pageSize,int pageNumber){
+        if(!Roles.INSTRUCTOR.equals(instructor.getRole())){
             throw  new AccessDeniedException("Only instructors can view enrolled students");
         }
         Pageable pageable= PageRequest.of(pageNumber,pageSize);
         Page<Enrollment> enrollments=enrollmentRepository.findByCourseInstructorAndEnrollmentStatus(instructor,EnrollmentStatus.ENROLLED,pageable);
         Page<StudentInfoDto> dtoList=enrollments.map(this::mapToStudentInfoDto);
-        return new ApiResponseDto<>(true,"Fetched enrolled students successfully",dtoList);
-
+        PaginatedResponse<StudentInfoDto> response=new PaginatedResponse<>(dtoList.getContent(),dtoList.getNumber(),dtoList.getSize(),dtoList.getTotalElements(),dtoList.getTotalPages());
+        return new ApiResponseDto<>(true,"Fetched enrolled students successfully",response);
     }
 
     private StudentInfoDto mapToStudentInfoDto(Enrollment enrollment) {
@@ -130,13 +117,16 @@ public class InstructorService {
 
 
     private CourseDto convertToDto(Course course){
-       return CourseDto.builder()
-               .id(course.getId())
-               .title(course.getTitle())
-               .description(course.getDescription())
-               .createdAt(course.getCreatedAt())
-               .updatedAt(course.getUpdatedAt())
-               .build();
+        return CourseDto.builder()
+                .id(course.getId())
+                .title(course.getTitle())
+                .description(course.getDescription())
+                .price(course.getPrice())
+                .courseType(course.getPrice() != null && course.getPrice() > 0 ? "PAID" : "FREE")
+                .createdAt(course.getCreatedAt())
+                .updatedAt(course.getUpdatedAt())
+                .build();
     }
+
 
 }

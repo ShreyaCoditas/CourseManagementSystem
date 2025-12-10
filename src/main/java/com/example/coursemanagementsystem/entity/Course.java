@@ -34,6 +34,10 @@ public class Course {
     @Column(name="status")
     private Status status;
 
+    @Column(name = "price", nullable = false)
+    private Double price;   // 0 = free, >0 = paid
+
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="instructor_id")
     private User instructor;

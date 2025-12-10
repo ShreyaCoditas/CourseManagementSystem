@@ -1,6 +1,7 @@
 package com.example.coursemanagementsystem.entity;
 
 import com.example.coursemanagementsystem.constants.EnrollmentStatus;
+import com.example.coursemanagementsystem.constants.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,6 +38,11 @@ public class Enrollment {
     @Enumerated(EnumType.STRING)
     @Column(name="enrollment_status")
     private EnrollmentStatus enrollmentStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status")
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
 
     @PrePersist
     private void onCreate(){
