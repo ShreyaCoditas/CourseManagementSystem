@@ -18,3 +18,13 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: true
+
+  - changeSet:
+     id: 003-add-profile-picture-to-user
+     author: Shreya
+     changes:
+       - sqlFile:
+           path: sql/003-add-profile-picture-to-user.sql
+           relativeToChangelogFile: true
+           splitStatements: true
+           stripComments: true

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<h2>Payment Successful</h2>
+
+<p>Hello <b th:text="${studentName}">Student</b>,</p>
+
+<p>Your payment for the course <b th:text="${courseTitle}">Course</b> has been confirmed.</p>
+
+<p><b>Instructor:</b> <span th:text="${instructorName}"></span></p>
+<p><b>Amount Paid:</b> ₹<span th:text="${amount}"></span></p>
+<p><b>Payment Date:</b> <span th:text="${paymentDate}"></span></p>
+
+<p>Thank you for learning with us!</p>
+
+</body>
+</html>

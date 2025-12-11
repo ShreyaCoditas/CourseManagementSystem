@@ -1,7 +1,6 @@
 package com.example.coursemanagementsystem.service;
 import com.example.coursemanagementsystem.constants.PaymentStatus;
 import com.example.coursemanagementsystem.dto.*;
-import com.example.coursemanagementsystem.security.UserPrincipal;
 import com.example.coursemanagementsystem.constants.EnrollmentStatus;
 import com.example.coursemanagementsystem.constants.Roles;
 import com.example.coursemanagementsystem.constants.Status;
@@ -21,15 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class StudentService {
@@ -105,16 +99,16 @@ public class StudentService {
         }
         Enrollment saved=enrollmentRepository.save(enrollment);
 
-        emailUtil.sendEmail(
+        emailUtil.sendEnrollmentEmail(
                 student.getEmail(),
                 "Enrollment Successful: " + course.getTitle(),
-                "Hi " + student.getName() + ",\n\n" +
-                        "You have successfully enrolled in the course \"" + course.getTitle() + "\".\n" +
-                        "Course Status: " + enrollment.getEnrollmentStatus() + "\n" +
-                        "Payment Status: " + enrollment.getPaymentStatus() + "\n\n" +
-                        "Thank you for using our platform!\n" +
-                        "Course Management Team"
+                student.getName(),
+                course.getTitle(),
+                course.getInstructor().getName(),
+                enrollment.getEnrollmentStatus().name(),
+                enrollment.getPaymentStatus().name()
         );
+
 
         return new ApiResponseDto<>(true,"Student enrolled into course successfully",mapToEnrollmentDTO(saved));
 
@@ -162,6 +156,16 @@ public class StudentService {
 
         enrollment.setPaymentStatus(PaymentStatus.PAID);
         enrollmentRepository.save(enrollment);
+
+        emailUtil.sendPaymentConfirmationEmail(
+                student.getEmail(),
+                student.getName(),
+                course.getTitle(),
+                course.getInstructor().getName(),
+                course.getPrice(),
+                LocalDateTime.now().toString()
+        );
+
         return new ApiResponseDto<>(true, "Payment successful. Course unlocked!", "PAID");
     }
 

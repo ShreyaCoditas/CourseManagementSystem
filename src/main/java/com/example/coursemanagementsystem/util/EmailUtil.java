@@ -1,22 +1,24 @@
 package com.example.coursemanagementsystem.util;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Component;
+public interface EmailUtil {
 
-@Component
-@RequiredArgsConstructor
-public class EmailUtil {
+    void sendEnrollmentEmail(
+            String to,
+            String subject,
+            String studentName,
+            String courseTitle,
+            String instructorName,
+            String enrollmentStatus,
+            String paymentStatus
+    );
 
-    private final JavaMailSender mailSender;
-
-    public void sendEmail(String to, String subject, String body) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("shreya.amanaganti@coditas.com"); // must match spring.mail.username
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-        mailSender.send(message);
-    }
+    void sendPaymentConfirmationEmail(
+            String to,
+            String studentName,
+            String courseTitle,
+            String instructorName,
+            Double amount,
+            String paymentDate
+    );
 }
+

@@ -45,6 +45,9 @@ public class User {
     @Column(name="updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name="profile_picture_url")
+    private String profilePictureUrl;
+
     @OneToMany(mappedBy = "instructor",cascade = CascadeType.ALL)
     private List<Course> courses=new ArrayList<>();
 

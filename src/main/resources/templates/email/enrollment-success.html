@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .title { color: #4CAF50; font-size: 20px; font-weight: bold; }
+        .content { margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<p class="title">Enrollment Successful 🎉</p>
+
+<p>Hi <span th:text="${studentName}"></span>,</p>
+
+<div class="content">
+    <p>You have successfully enrolled in the course:</p>
+
+    <h3 th:text="${courseTitle}"></h3>
+
+    <p><b>Instructor:</b> <span th:text="${instructorName}"></span></p>
+
+    <p><b>Enrollment Status:</b> <span th:text="${enrollmentStatus}"></span></p>
+    <p><b>Payment Status:</b> <span th:text="${paymentStatus}"></span></p>
+
+    <br>
+
+    <p>Thank you for using our platform!</p>
+    <p>— Course Management Team</p>
+</div>
+
+</body>
+</html>

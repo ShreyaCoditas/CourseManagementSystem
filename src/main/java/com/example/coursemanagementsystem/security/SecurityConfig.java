@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/instructor/delete/course/{courseId}").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/instructor/enrolled/students").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/instructor/all/courses").hasRole("INSTRUCTOR")
+                        .requestMatchers("/api/instructor/upload/picture").hasRole("INSTRUCTOR")
                         .requestMatchers("/api/student/enroll/course/{courseId}").hasRole("STUDENT")
                         .requestMatchers("/api/student/cancel/enrollment/course/{courseId}").hasRole("STUDENT")
                         .requestMatchers("/api/student/view/courses").hasRole("STUDENT")

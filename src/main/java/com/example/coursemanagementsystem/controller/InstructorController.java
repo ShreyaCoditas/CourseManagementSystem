@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -58,6 +59,16 @@ public class InstructorController {
     ){
         User instructor=principal.getUser();
         ApiResponseDto<PaginatedResponse<StudentInfoDto>> response=instructorService.getEnrolledStudents(instructor,pageSize,pageNumber);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/upload/picture")
+    public ResponseEntity<ApiResponseDto<Void>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal
+    ){
+        User instructor=principal.getUser();
+        ApiResponseDto<Void> response=instructorService.uploadImage(file,instructor);
         return ResponseEntity.ok(response);
     }
 }

@@ -7,10 +7,12 @@ import com.example.coursemanagementsystem.dto.*;
 import com.example.coursemanagementsystem.entity.Course;
 import com.example.coursemanagementsystem.entity.Enrollment;
 import com.example.coursemanagementsystem.entity.User;
+
 import com.example.coursemanagementsystem.exception.InactiveCourseException;
 import com.example.coursemanagementsystem.exception.ResourceNotFoundException;
 import com.example.coursemanagementsystem.repository.CourseRepository;
 import com.example.coursemanagementsystem.repository.EnrollmentRepository;
+import com.example.coursemanagementsystem.repository.UserRepository;
 import com.example.coursemanagementsystem.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.apache.catalina.core.ApplicationPushBuilder;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +37,14 @@ public class InstructorService {
 
     @Autowired
     private EnrollmentRepository enrollmentRepository;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+
 
     public ApiResponseDto<Void> addCourse(@Valid AddCourseDto addCourseDto, User instructor) {
         if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
@@ -92,6 +103,7 @@ public class InstructorService {
         return new ApiResponseDto<>(true,"Course deleted successfully",null);
     }
 
+
     public ApiResponseDto<PaginatedResponse<StudentInfoDto>> getEnrolledStudents(User instructor,int pageSize,int pageNumber){
         if(!Roles.INSTRUCTOR.equals(instructor.getRole())){
             throw  new AccessDeniedException("Only instructors can view enrolled students");
@@ -102,6 +114,18 @@ public class InstructorService {
         PaginatedResponse<StudentInfoDto> response=new PaginatedResponse<>(dtoList.getContent(),dtoList.getNumber(),dtoList.getSize(),dtoList.getTotalElements(),dtoList.getTotalPages());
         return new ApiResponseDto<>(true,"Fetched enrolled students successfully",response);
     }
+
+    public ApiResponseDto<Void> uploadImage(MultipartFile file, User instructor) {
+        if(!Roles.INSTRUCTOR.equals(instructor.getRole())){
+            throw new AccessDeniedException("Only instructors can upload profile pictures");
+        }
+        String imageUrl=cloudinaryService.uploadFile(file);
+        instructor.setProfilePictureUrl(imageUrl);
+        userRepository.save(instructor);
+        return new ApiResponseDto<>(true,"Profile picture uploaded successfully",null);
+    }
+
+
 
     private StudentInfoDto mapToStudentInfoDto(Enrollment enrollment) {
         User student = enrollment.getStudent();
@@ -127,6 +151,7 @@ public class InstructorService {
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
+
 
 
 }
