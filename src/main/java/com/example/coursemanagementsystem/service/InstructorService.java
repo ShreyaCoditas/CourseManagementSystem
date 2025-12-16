@@ -60,6 +60,7 @@ public class InstructorService {
         course.setInstructor(instructor);
         course.setStatus(Status.ACTIVE);
         course.setPrice(addCourseDto.getPrice());
+        course.setMaxCapacity(addCourseDto.getMaxCapacity());
         courseRepository.save(course);
         return new ApiResponseDto<>(true,"Course added successfully",null);
 
@@ -86,7 +87,7 @@ public class InstructorService {
         if (updateCourseDto.getPrice() != null) {
             course.setPrice(updateCourseDto.getPrice());
         }
-
+        course.setMaxCapacity(updateCourseDto.getMaxCapacity());
         courseRepository.save(course);
         return new ApiResponseDto<>(true,"Updated course successfully",convertToDto(course));
     }
@@ -129,7 +130,6 @@ public class InstructorService {
 
     private StudentInfoDto mapToStudentInfoDto(Enrollment enrollment) {
         User student = enrollment.getStudent();
-
         return StudentInfoDto.builder()
                 .studentId(student.getId())
                 .studentName(student.getName())
@@ -147,6 +147,8 @@ public class InstructorService {
                 .description(course.getDescription())
                 .price(course.getPrice())
                 .courseType(course.getPrice() != null && course.getPrice() > 0 ? "PAID" : "FREE")
+                .instructorName(course.getInstructor().getName())
+                .maxCapacity(course.getMaxCapacity())
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
                 .build();

@@ -28,3 +28,23 @@ databaseChangeLog:
            relativeToChangelogFile: true
            splitStatements: true
            stripComments: true
+
+  - changeSet:
+      id: 004-add-course-capacity
+      author: Shreya
+      changes:
+        - sqlFile:
+            path: sql/004-add-course-capacity.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true
+
+  - changeSet:
+      id: update-enrollment-status-enum
+      author: shreya
+      changes:
+        - modifyDataType:
+            tableName: enrollment
+            columnName: enrollment_status
+            newDataType: ENUM('ENROLLED','WAITLISTED','CANCELLED','COMPLETED')
+

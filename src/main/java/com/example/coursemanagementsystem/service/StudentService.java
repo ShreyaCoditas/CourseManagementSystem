@@ -24,6 +24,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class StudentService {
@@ -86,12 +87,17 @@ public class StudentService {
 
         boolean alreadyenrolled=enrollmentRepository.existsByCourseIdAndStudentIdAndEnrollmentStatus(courseId,student.getId(),EnrollmentStatus.ENROLLED);
         if(alreadyenrolled)
-            throw new AlreadyEnrolledException("Already enrolled in this course");
+            throw new AlreadyEnrolledException("Already enrolled or waitlisted in this course");
+        int enrolled=enrollmentRepository.countByCourseIdAndEnrollmentStatus(courseId,EnrollmentStatus.ENROLLED);
         Enrollment enrollment=new Enrollment();
         enrollment.setStudent(student);
         enrollment.setCourse(course);
         enrollment.setEnrolledAt(LocalDateTime.now());
-        enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
+        //enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
+        if(enrolled<course.getMaxCapacity())
+            enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
+        else
+            enrollment.setEnrollmentStatus(EnrollmentStatus.WAITLISTED);
         if (course.getPrice() != null && course.getPrice() > 0) {
             enrollment.setPaymentStatus(PaymentStatus.PENDING); // paid course → pending payment
         } else {
@@ -108,10 +114,7 @@ public class StudentService {
                 enrollment.getEnrollmentStatus().name(),
                 enrollment.getPaymentStatus().name()
         );
-
-
         return new ApiResponseDto<>(true,"Student enrolled into course successfully",mapToEnrollmentDTO(saved));
-
     }
 
 
@@ -133,7 +136,32 @@ public class StudentService {
         enrollment.setEnrollmentStatus(EnrollmentStatus.CANCELLED);
         enrollment.setCancelledAt(LocalDateTime.now());
         Enrollment saved=enrollmentRepository.save(enrollment);
+        autoEnrollNextStudent(courseId);
         return new ApiResponseDto<>(true,"cancelled enrollment successfully",mapToDto(saved));
+    }
+
+    private void autoEnrollNextStudent(Long courseId) {
+       Optional<Enrollment> waitlisted=enrollmentRepository.findFirstByCourseIdAndEnrollmentStatusOrderByEnrolledAtAsc(courseId,EnrollmentStatus.WAITLISTED);
+       waitlisted.ifPresent(enrollment->{
+           enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
+           Enrollment saved=enrollmentRepository.save(enrollment);
+
+           User student=saved.getStudent();
+           Course course=saved.getCourse();
+
+           emailUtil.sendEnrollmentEmail(
+                   student.getEmail(),
+                   "Enrollment Successful: " + course.getTitle(),
+                   student.getName(),
+                   course.getTitle(),
+                   course.getInstructor().getName(),
+                   enrollment.getEnrollmentStatus().name(),
+                   enrollment.getPaymentStatus().name()
+           );
+
+
+
+       });
     }
 
 
@@ -157,15 +185,7 @@ public class StudentService {
         enrollment.setPaymentStatus(PaymentStatus.PAID);
         enrollmentRepository.save(enrollment);
 
-        emailUtil.sendPaymentConfirmationEmail(
-                student.getEmail(),
-                student.getName(),
-                course.getTitle(),
-                course.getInstructor().getName(),
-                course.getPrice(),
-                LocalDateTime.now().toString()
-        );
-
+        emailUtil.sendPaymentConfirmationEmail(student.getEmail(), student.getName(), course.getTitle(), course.getInstructor().getName(),course.getPrice(), LocalDateTime.now().toString());
         return new ApiResponseDto<>(true, "Payment successful. Course unlocked!", "PAID");
     }
 
@@ -188,6 +208,7 @@ public class StudentService {
         Course course=enrollment.getCourse();
         User student=enrollment.getStudent();
         return CancelEnrollmentResponseDTO.builder()
+                .enrollmentId(enrollment.getId())
                 .studentId(student.getId())
                 .studentName(student.getName())
                 .courseId(course.getId())
@@ -212,5 +233,10 @@ public class StudentService {
     }
 
 
-
+//    public ApiResponseDto<Void> maxCapacityAndWaitlist(Long courseId, User student) {
+//        Course course=courseRepository.findById(courseId)
+//                .orElseThrow(()->new ResourceNotFoundException("Course Not Found exception"));
+//         if(course.getMaxCapacity().equals(max))
+//
+//    }
 }

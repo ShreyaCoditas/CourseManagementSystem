@@ -18,7 +18,8 @@ public class CourseDto {
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private User instructorName;
+    private String instructorName;
     private Double price;
     private String courseType; //free or paid
+    private Integer maxCapacity;
 }

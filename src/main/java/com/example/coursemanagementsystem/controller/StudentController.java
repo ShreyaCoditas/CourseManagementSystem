@@ -92,6 +92,16 @@ public class StudentController {
     return ResponseEntity.ok(response);
   }
 
+//  @PostMapping("/maxCapacity/{courseId}")
+//  public ResponseEntity<ApiResponseDto<Void>> maxCapacityAndWaitlist(
+//          @PathVariable Long courseId,
+//          @AuthenticationPrincipal UserPrincipal userPrincipal
+//  ){
+//    User student=userPrincipal.getUser();
+//    ApiResponseDto<Void> response=studentService.maxCapacityAndWaitlist(courseId,student);
+//    return ResponseEntity.ok(response);
+//  }
+
 
 
 }

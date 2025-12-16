@@ -37,6 +37,9 @@ public class Course {
     @Column(name = "price", nullable = false)
     private Double price;   // 0 = free, >0 = paid
 
+    @Column(name="max_capacity")
+    private Integer maxCapacity;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="instructor_id")

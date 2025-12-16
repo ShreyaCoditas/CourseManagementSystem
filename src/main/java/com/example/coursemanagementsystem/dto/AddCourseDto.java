@@ -18,4 +18,7 @@ public class AddCourseDto {
     @NotNull(message = "Price is required")
     @Min(value = 0, message = "Price cannot be negative")
     private Double price;
+    @NotNull(message = "Maximum capacity cannot be null")
+    @Min(value=1, message  ="capacity should be one or more than one")
+    private Integer maxCapacity;
 }
