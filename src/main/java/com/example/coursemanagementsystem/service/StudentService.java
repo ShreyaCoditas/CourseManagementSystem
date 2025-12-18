@@ -14,6 +14,7 @@ import com.example.coursemanagementsystem.repository.CourseRepository;
 import com.example.coursemanagementsystem.repository.EnrollmentRepository;
 import com.example.coursemanagementsystem.specifications.CourseSpecifications;
 import com.example.coursemanagementsystem.util.EmailUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class StudentService {
 
@@ -47,6 +49,7 @@ public class StudentService {
             LocalDateTime fromDate,LocalDateTime toDate,
             String searchKeyword,
             Integer minStudents,Integer maxStudents) {
+        log.info("fetch all courses");
 
         Sort sort=direction.equalsIgnoreCase("desc")
                 ?Sort.by(sortBy).descending()
@@ -65,35 +68,53 @@ public class StudentService {
         Page<Course> coursePage = courseRepository.findAll(spec, pageable);
         Page<CourseResponseDto> dtoPage = coursePage.map(this::mapToCourseDto);
         PaginatedResponse response=new PaginatedResponse(dtoPage.getContent(),dtoPage.getNumber(), dtoPage.getSize(), dtoPage.getTotalElements(), dtoPage.getTotalPages());
+        log.info("fetched all courses");
         return new ApiResponseDto<>(true, "Fetched All Courses successfully", response);
     }
 
     
     public ApiResponseDto<PaginatedResponse<CourseResponseDto>> getEnrolledCourses(Long studentId,int pageSize,int pageNumber){
+        log.info("To fetch all enrolled courses");
         Pageable pageable=PageRequest.of(pageNumber,pageSize);
         Page<Enrollment> enrollments=enrollmentRepository.findByStudentIdAndEnrollmentStatus(studentId,EnrollmentStatus.ENROLLED,pageable);
         Page<CourseResponseDto> courseResponseDtos=enrollments.map(e->mapToCourseDto(e.getCourse()));
         PaginatedResponse response=new PaginatedResponse(courseResponseDtos.getContent(),courseResponseDtos.getSize(),courseResponseDtos.getNumber(),courseResponseDtos.getTotalElements(),courseResponseDtos.getTotalPages());
+        log.info("fetched enrolled courses successfully");
         return new ApiResponseDto<>(true,"Fetched enrolled courses successfully",response);
     }
 
     public ApiResponseDto<EnrollmentDTO> enrollIntoCourse(Long courseId, User student) {
+
+        log.info("enroll into course request| studentId={} | courseId={}",student.getId(),courseId);
+
         Course course=courseRepository.findById(courseId)
-                .orElseThrow(()->new ResourceNotFoundException("Course Not Found"));
-        if(!Roles.STUDENT.equals(student.getRole()))
+                .orElseThrow(()->{
+                    log.warn("Course Not Found | courseId={}",courseId);
+                   return new ResourceNotFoundException("Course Not Found");
+                });
+
+
+        if(!Roles.STUDENT.equals(student.getRole())) {
+            log.warn("Unauthorised access attempt|userId={}",student.getId());
             throw new AccessDeniedException("Only students can enroll into courses");
-        if(course.getStatus()== Status.INACTIVE)
+        }
+
+        if(course.getStatus()== Status.INACTIVE) {
+            log.warn("Enroll attempt for inactive course| courseId={}",courseId);
             throw new InactiveCourseException("Cannot enroll into inactive courses");
+        }
 
         boolean alreadyenrolled=enrollmentRepository.existsByCourseIdAndStudentIdAndEnrollmentStatus(courseId,student.getId(),EnrollmentStatus.ENROLLED);
-        if(alreadyenrolled)
+        if(alreadyenrolled) {
+            log.warn("Student already enrolled or waitlisted| userId={}| courseId={}",student.getId(),courseId);
             throw new AlreadyEnrolledException("Already enrolled or waitlisted in this course");
+        }
         int enrolled=enrollmentRepository.countByCourseIdAndEnrollmentStatus(courseId,EnrollmentStatus.ENROLLED);
+        log.debug("total enrolled students| enrolled count={} | maxCapacity={}",enrolled,course.getMaxCapacity());
         Enrollment enrollment=new Enrollment();
         enrollment.setStudent(student);
         enrollment.setCourse(course);
         enrollment.setEnrolledAt(LocalDateTime.now());
-        //enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
         if(enrolled<course.getMaxCapacity())
             enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
         else
@@ -104,6 +125,7 @@ public class StudentService {
             enrollment.setPaymentStatus(PaymentStatus.PAID); // free course
         }
         Enrollment saved=enrollmentRepository.save(enrollment);
+        log.info("Student enrolled into course successfully| studentId={} | courseId={} | enrollmentStatus={}",student.getId(),courseId,saved.getEnrollmentStatus());
 
         emailUtil.sendEnrollmentEmail(
                 student.getEmail(),
@@ -114,37 +136,55 @@ public class StudentService {
                 enrollment.getEnrollmentStatus().name(),
                 enrollment.getPaymentStatus().name()
         );
+        log.debug("Enrollment email sent| studentId={} | courseId={}",student.getId(),courseId);
         return new ApiResponseDto<>(true,"Student enrolled into course successfully",mapToEnrollmentDTO(saved));
     }
 
 
     public ApiResponseDto<CancelEnrollmentResponseDTO> cancelEnrollmentIntoCourse(Long courseId, User student) {
+        log.info("Cancel Enrollment request| studentId={} | courseId={}",student.getId(),courseId);
+
         Course course=courseRepository.findById(courseId)
-                .orElseThrow(()->new ResourceNotFoundException("Course Not Found"));
+                .orElseThrow(()->{
+                    log.warn("Course Not Found | courseId={}",courseId);
+                     return new ResourceNotFoundException("Course Not Found");
+                });
 
-        if(course.getStatus()==Status.INACTIVE)
+
+        if(course.getStatus()==Status.INACTIVE) {
+            log.warn("cancel attempt for inactive course| courseId={} | studentId={}",courseId,student.getId());
             throw new InactiveCourseException("Cannot cancel inactive status");
+        }
 
-        if(!student.getRole().equals(Roles.STUDENT))
+        if(!student.getRole().equals(Roles.STUDENT)) {
+            log.warn("Unauthorised attempt to cancel the enrollment | courseId={} | userId={}",courseId,student.getId());
             throw new AccessDeniedException("Only Student can cancel the enrollment");
+        }
 
         Enrollment enrollment=enrollmentRepository.findByCourseIdAndStudentId(courseId,student.getId())
-                        .orElseThrow(()->new ResourceNotFoundException("Enrollment Not found"));
+                        .orElseThrow(()->{
+                                    log.warn("Enrollment of the student is not found | studentId={} | courseId={}",student.getId(),courseId);
+                                    return new ResourceNotFoundException("Enrollment Not found");
+                        });
+
 
         enrollment.setCourse(course);
         enrollment.setStudent(student);
         enrollment.setEnrollmentStatus(EnrollmentStatus.CANCELLED);
         enrollment.setCancelledAt(LocalDateTime.now());
         Enrollment saved=enrollmentRepository.save(enrollment);
+        log.info("Cancelled enrollment successfully| courseId={} | studentId={}",courseId,student.getId());
         autoEnrollNextStudent(courseId);
         return new ApiResponseDto<>(true,"cancelled enrollment successfully",mapToDto(saved));
     }
 
     private void autoEnrollNextStudent(Long courseId) {
+        log.debug("checking waitlist for auto-enroll | courseId={}",courseId);
        Optional<Enrollment> waitlisted=enrollmentRepository.findFirstByCourseIdAndEnrollmentStatusOrderByEnrolledAtAsc(courseId,EnrollmentStatus.WAITLISTED);
        waitlisted.ifPresent(enrollment->{
            enrollment.setEnrollmentStatus(EnrollmentStatus.ENROLLED);
            Enrollment saved=enrollmentRepository.save(enrollment);
+           log.info("auto-enrolled waitlisted student | courseId={} | studentId={}",courseId,saved.getStudent().getId());
 
            User student=saved.getStudent();
            Course course=saved.getCourse();
@@ -158,22 +198,28 @@ public class StudentService {
                    enrollment.getEnrollmentStatus().name(),
                    enrollment.getPaymentStatus().name()
            );
-
-
-
        });
     }
 
 
     public ApiResponseDto<String> purchaseCourse(Long courseId, User student) {
+        log.info("Purchase course request attempt| courseId={} | studentId={}",courseId,student.getId());
         Course course=courseRepository.findById(courseId)
-                .orElseThrow(()->new ResourceNotFoundException("Course Not Found"));
+                .orElseThrow(()->{
+                    log.warn("Course Not Found | courseId={}",courseId);
+                     return new ResourceNotFoundException("Course Not Found");
+                });
 
-        if(course.getStatus()==Status.INACTIVE)
-            throw new InactiveCourseException("Cannot cancel inactive status");
 
-        if(!Roles.STUDENT.equals(student.getRole()))
+        if(course.getStatus()==Status.INACTIVE) {
+            log.warn("attempt to purchase inactive course| courseId={} | status={}",courseId,course.getStatus());
+            throw new InactiveCourseException("Cannot purchase inactive status");
+        }
+
+        if(!Roles.STUDENT.equals(student.getRole())) {
+            log.warn("Unauthorised access to purchase course| courseId={} | role={} | userId={}",courseId,student.getRole(),student.getId());
             throw new AccessDeniedException("Only students are allowed to purchase the Courses");
+        }
 
         Enrollment enrollment = enrollmentRepository
                 .findByCourseIdAndStudentIdAndEnrollmentStatus(courseId, student.getId(),EnrollmentStatus.ENROLLED)
@@ -183,7 +229,9 @@ public class StudentService {
             return new ApiResponseDto<>(true, "Course already purchased", "PAID");
 
         enrollment.setPaymentStatus(PaymentStatus.PAID);
-        enrollmentRepository.save(enrollment);
+        Enrollment saved= enrollmentRepository.save(enrollment);
+
+        log.info("Payment successful | courseId={} | payamentStatus={}",courseId,saved.getPaymentStatus());
 
         emailUtil.sendPaymentConfirmationEmail(student.getEmail(), student.getName(), course.getTitle(), course.getInstructor().getName(),course.getPrice(), LocalDateTime.now().toString());
         return new ApiResponseDto<>(true, "Payment successful. Course unlocked!", "PAID");
@@ -231,12 +279,4 @@ public class StudentService {
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
-
-
-//    public ApiResponseDto<Void> maxCapacityAndWaitlist(Long courseId, User student) {
-//        Course course=courseRepository.findById(courseId)
-//                .orElseThrow(()->new ResourceNotFoundException("Course Not Found exception"));
-//         if(course.getMaxCapacity().equals(max))
-//
-//    }
 }

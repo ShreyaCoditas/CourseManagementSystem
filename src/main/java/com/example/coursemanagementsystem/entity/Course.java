@@ -23,12 +23,11 @@ public class Course {
     @Column(name="id")
     private Long id;
 
-    @Column(name="title")
+    @Column(name="title",nullable = false)
     private String title;
 
-    @Column(name="description")
+    @Column(name="description",nullable = false)
     private String description;
-
 
     @Enumerated(EnumType.STRING)
     @Column(name="status")
@@ -37,7 +36,7 @@ public class Course {
     @Column(name = "price", nullable = false)
     private Double price;   // 0 = free, >0 = paid
 
-    @Column(name="max_capacity")
+    @Column(name="max_capacity",nullable = false)
     private Integer maxCapacity;
 
 

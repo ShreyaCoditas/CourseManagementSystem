@@ -1,18 +1,13 @@
 package com.example.coursemanagementsystem.controller;
 
-import com.example.coursemanagementsystem.dto.ApiResponseDto;
-import com.example.coursemanagementsystem.dto.CreateLoginDto;
-import com.example.coursemanagementsystem.dto.CreateRegisterDto;
-import com.example.coursemanagementsystem.dto.LoginResponseDto;
+import com.cloudinary.Api;
+import com.example.coursemanagementsystem.dto.*;
 import com.example.coursemanagementsystem.repository.UserRepository;
 import com.example.coursemanagementsystem.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,6 +30,17 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponseDto<LoginResponseDto>> refresh(@RequestBody RefreshTokenRequestDto dto){
+        ApiResponseDto<LoginResponseDto> response=authService.refreshToken(dto.getRefreshToken());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponseDto<Void>> logout(@RequestBody RefreshTokenRequestDto dto){
+        ApiResponseDto<Void> response=authService.logout(dto.getRefreshToken());
+        return ResponseEntity.ok(response);
+    }
 
 
 }

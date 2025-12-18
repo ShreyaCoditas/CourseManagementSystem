@@ -1,7 +1,6 @@
 package com.example.coursemanagementsystem.service;
 
 import com.example.coursemanagementsystem.constants.Roles;
-import com.example.coursemanagementsystem.constants.Status;
 import com.example.coursemanagementsystem.dto.ApiResponseDto;
 import com.example.coursemanagementsystem.dto.CreateLoginDto;
 import com.example.coursemanagementsystem.dto.CreateRegisterDto;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -138,7 +136,7 @@ class AuthServiceTest {
                 .thenReturn(authentication);
 
         // mock jwt token
-        when(jwtUtil.generateToken("shreya@gmail.com"))
+        when(jwtUtil.generateAccessToken("shreya@gmail.com"))
                 .thenReturn("fake-jwt");
 
         ApiResponseDto<LoginResponseDto> response = authService.login(dto);

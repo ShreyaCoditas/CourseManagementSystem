@@ -15,6 +15,7 @@ import com.example.coursemanagementsystem.repository.EnrollmentRepository;
 import com.example.coursemanagementsystem.repository.UserRepository;
 import com.example.coursemanagementsystem.security.UserPrincipal;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.core.ApplicationPushBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class InstructorService {
 
@@ -44,17 +46,21 @@ public class InstructorService {
     @Autowired
     private UserRepository userRepository;
 
-
-
     public ApiResponseDto<Void> addCourse(@Valid AddCourseDto addCourseDto, User instructor) {
+
+        log.info("Add course request received| instructorId={}", instructor.getId());
+
         if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
-            throw new AccessDeniedException("Only instructors can add courses");
+            log.warn("Unauthorized add course attempt| userId={}| role={}", instructor.getId(), instructor.getRole());
+            throw new AccessDeniedException("Only instructors can add ciourses");
         }
+
         if (instructor.getStatus() == Status.INACTIVE) {
+            log.warn("Inactive instructor tried to add the course| instructorId={}", instructor.getId());
             throw new AccessDeniedException("Inactive instructors cannot add courses");
         }
 
-        Course course=new Course();
+        Course course = new Course();
         course.setTitle(addCourseDto.getTitle());
         course.setDescription(addCourseDto.getDescription());
         course.setInstructor(instructor);
@@ -62,25 +68,37 @@ public class InstructorService {
         course.setPrice(addCourseDto.getPrice());
         course.setMaxCapacity(addCourseDto.getMaxCapacity());
         courseRepository.save(course);
-        return new ApiResponseDto<>(true,"Course added successfully",null);
 
+        log.info("Course added successfully | instructorId={} | courseId={}", instructor.getId(), course.getId());
 
-
+        return new ApiResponseDto<>(true, "Course added successfully", null);
     }
 
-    public ApiResponseDto<CourseDto> updateCourse(@Valid UpdateCourseDto updateCourseDto,Long courseId, User instructor) {
-        Course course=courseRepository.findById(courseId)
-                .orElseThrow(()->new ResourceNotFoundException("Course Not Found Exception"));
+
+    public ApiResponseDto<CourseDto> updateCourse(@Valid UpdateCourseDto updateCourseDto, Long courseId, User instructor) {
+
+        log.info("Update course request received| instructorId={} | courseId={}", instructor.getId(), courseId);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> {
+                    log.warn("course not found| courseId={}", courseId);
+                    return new ResourceNotFoundException("Course Not Found Exception");
+                });
 
         if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
+            log.warn("unauthorised update course attempt| instructorId={} | courseId={}", instructor.getId(), courseId);
             throw new AccessDeniedException("Only instructors can update courses");
         }
 
-        if(course.getStatus()==Status.INACTIVE)
+        if (course.getStatus() == Status.INACTIVE) {
+            log.warn("Attempt to update inactive course| courseId={}", courseId);
             throw new InactiveCourseException("cannot update inactive course");
+        }
 
-        if(!course.getInstructor().getId().equals(instructor.getId()))
+        if (!course.getInstructor().getId().equals(instructor.getId())) {
+            log.warn("unauthorised update course attempt| instructorId={} | courseId={}", instructor.getId(), courseId);
             throw new AccessDeniedException("you are not authorised to update other courses");
+        }
 
         course.setTitle(updateCourseDto.getTitle());
         course.setDescription(updateCourseDto.getDescription());
@@ -89,43 +107,61 @@ public class InstructorService {
         }
         course.setMaxCapacity(updateCourseDto.getMaxCapacity());
         courseRepository.save(course);
-        return new ApiResponseDto<>(true,"Updated course successfully",convertToDto(course));
+        log.info("Course updated successfully | courseId={} | isntructorId={}", courseId, instructor.getId());
+        return new ApiResponseDto<>(true, "Updated course successfully", convertToDto(course));
     }
 
-    public ApiResponseDto<Void> deleteCourse(Long courseId,User instructor) {
-        Course course=courseRepository.findById(courseId)
-                .orElseThrow(()->new ResourceNotFoundException("Course Not Found"));
+    public ApiResponseDto<Void> deleteCourse(Long courseId, User instructor) {
 
-        if(!course.getInstructor().getId().equals(instructor.getId()))
+        log.info("Attempt to delete course received | instructorId={} | courseId={}", instructor.getId(), courseId);
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> {
+                    log.warn("Course Not Found| courseId={}", courseId);
+                    return new ResourceNotFoundException("Course Not Found");
+                });
+
+        if (!course.getInstructor().getId().equals(instructor.getId())) {
+            log.warn("Unauthorised delete request| instructorId={} | courseId={}", instructor.getId(), courseId);
             throw new AccessDeniedException("You cannot delete others courses");
+        }
 
         course.setStatus(Status.INACTIVE);
         courseRepository.save(course);
-        return new ApiResponseDto<>(true,"Course deleted successfully",null);
+        log.info("Course deleted successfully| courseId={} | instructorId={} ", courseId, instructor.getId());
+        return new ApiResponseDto<>(true, "Course deleted successfully", null);
     }
 
 
-    public ApiResponseDto<PaginatedResponse<StudentInfoDto>> getEnrolledStudents(User instructor,int pageSize,int pageNumber){
-        if(!Roles.INSTRUCTOR.equals(instructor.getRole())){
-            throw  new AccessDeniedException("Only instructors can view enrolled students");
+    public ApiResponseDto<PaginatedResponse<StudentInfoDto>> getEnrolledStudents(User instructor, int pageSize, int pageNumber) {
+        log.warn("Fetch enrolled students| instructorId={}", instructor.getId());
+        if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
+            throw new AccessDeniedException("Only instructors can view enrolled students");
         }
-        Pageable pageable= PageRequest.of(pageNumber,pageSize);
-        Page<Enrollment> enrollments=enrollmentRepository.findByCourseInstructorAndEnrollmentStatus(instructor,EnrollmentStatus.ENROLLED,pageable);
-        Page<StudentInfoDto> dtoList=enrollments.map(this::mapToStudentInfoDto);
-        PaginatedResponse<StudentInfoDto> response=new PaginatedResponse<>(dtoList.getContent(),dtoList.getNumber(),dtoList.getSize(),dtoList.getTotalElements(),dtoList.getTotalPages());
-        return new ApiResponseDto<>(true,"Fetched enrolled students successfully",response);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Enrollment> enrollments = enrollmentRepository.findByCourseInstructorAndEnrollmentStatus(instructor, EnrollmentStatus.ENROLLED, pageable);
+        Page<StudentInfoDto> dtoList = enrollments.map(this::mapToStudentInfoDto);
+        PaginatedResponse<StudentInfoDto> response = new PaginatedResponse<>(dtoList.getContent(), dtoList.getNumber(), dtoList.getSize(), dtoList.getTotalElements(), dtoList.getTotalPages());
+        log.warn("Fetched enrolled students succesfully");
+        return new ApiResponseDto<>(true, "Fetched enrolled students successfully", response);
     }
 
     public ApiResponseDto<Void> uploadImage(MultipartFile file, User instructor) {
-        if(!Roles.INSTRUCTOR.equals(instructor.getRole())){
+
+        log.info("Request to upload an image received| instructorId={}", instructor.getId());
+
+        if (!Roles.INSTRUCTOR.equals(instructor.getRole())) {
+            log.warn("Unauthorised upload image request| instructorId={}", instructor.getId());
             throw new AccessDeniedException("Only instructors can upload profile pictures");
         }
-        String imageUrl=cloudinaryService.uploadFile(file);
+        String imageUrl = cloudinaryService.uploadFile(file);
+        log.debug("Image uploaded to Cloudinary| url={}", imageUrl);
         instructor.setProfilePictureUrl(imageUrl);
         userRepository.save(instructor);
-        return new ApiResponseDto<>(true,"Profile picture uploaded successfully",null);
-    }
 
+        log.info("Profile picture has been updated succesfully| instructorId={}", instructor.getId());
+        return new ApiResponseDto<>(true, "Profile picture uploaded successfully", null);
+    }
 
 
     private StudentInfoDto mapToStudentInfoDto(Enrollment enrollment) {
@@ -138,9 +174,7 @@ public class InstructorService {
                 .build();
     }
 
-
-
-    private CourseDto convertToDto(Course course){
+    private CourseDto convertToDto(Course course) {
         return CourseDto.builder()
                 .id(course.getId())
                 .title(course.getTitle())
@@ -153,7 +187,6 @@ public class InstructorService {
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
-
 
 
 }

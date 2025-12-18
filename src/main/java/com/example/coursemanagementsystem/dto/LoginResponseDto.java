@@ -14,7 +14,8 @@ public class LoginResponseDto {
     private Long id;
     private String name;
     private String email;
-    private String token;
+    private String accesstoken;
+    private String refreshtoken;
     private Roles role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

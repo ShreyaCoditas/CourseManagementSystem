@@ -19,7 +19,7 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    public String generateToken(String username) {
+    public String generateAccessToken(String username) {
 
         Map<String,Object> claims=new HashMap<>();
 
@@ -28,7 +28,7 @@ public class JwtUtil {
                 .add(claims)
                 .subject(username)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 6000 * 600 *300))
+                .expiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000))
                 .and()
                 .signWith(getKey())
                 .compact();
